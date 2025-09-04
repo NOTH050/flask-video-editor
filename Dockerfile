@@ -1,15 +1,32 @@
-# Base image พร้อม Python
+# ✅ Base image
 FROM python:3.11-slim
 
-# ตั้ง working directory
+# ✅ ติดตั้ง system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    fonts-dejavu \
+    && rm -rf /var/lib/apt/lists/*
+
+# ✅ สร้างโฟลเดอร์สำหรับ app
 WORKDIR /app
 
-# Copy requirements และติดตั้ง
+# ✅ คัดลอก requirements.txt และติดตั้ง lib
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy โค้ดทั้งหมด
+# ✅ คัดลอกไฟล์โปรเจกต์ทั้งหมด
 COPY . .
 
-# ใช้ Gunicorn รัน Flask
+# ✅ เพิ่มฟอนต์ KanchaStay.ttf ลง system font
+RUN mkdir -p /usr/share/fonts/truetype/custom && \
+    cp fonts/KanchaStay.ttf /usr/share/fonts/truetype/custom/ && \
+    fc-cache -f -v
+
+# ✅ Port ที่ Flask จะใช้
+EXPOSE 8080
+
+# ✅ Run Flask app ด้วย Gunicorn
 CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "--workers", "2"]
+
