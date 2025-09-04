@@ -286,6 +286,9 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
                         white_bar_pct: int = 30, shift_down_pct: int = 20,
                         watermark_text: str = "", line_spacing:int=LINE_SPACING,
                         bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
+
+    TARGET_W, TARGET_H = 720, 1280  # ✅ fix ขนาด 720x1280
+
     white_h = int(TARGET_H * (white_bar_pct / 100.0))
     shift_down = int(TARGET_H * (shift_down_pct / 100.0))
 
@@ -311,7 +314,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(wm_png)
         layers.append(f"-i {wm_png}")
 
-    # ---------- Last 3s text ----------
+    # ---------- Last 2s text ----------
     duration = get_video_duration(inp)
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
@@ -328,40 +331,38 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
 
     # ---------- Base filter ----------
     filter_complex = (
-        f"[0:v]scale=w={TARGET_W}:h={TARGET_H},setpts={1.0/playback_speed}*PTS[vs];"
-        f"[vs]pad={TARGET_W}:{TARGET_H+shift_down}:0:{shift_down}:black[vp];"
-        f"[vp]crop={TARGET_W}:{TARGET_H}:0:0,"
-        f"drawbox=x=0:y=0:w={TARGET_W}:h={white_h}:color=white:t=fill[vbase]"
+        f"[0:v]setpts={1.0/playback_speed}*PTS,"
+        f"scale={TARGET_W}:{TARGET_H}:force_original_aspect_ratio=decrease,"
+        f"pad={TARGET_W}:{TARGET_H}:(ow-iw)/2:(oh-ih)/2:black[vbase];"
+        f"[vbase]drawbox=x=0:y=0:w={TARGET_W}:h={white_h}:color=white:t=fill[vout]"
     )
 
-    overlays = "vbase"
-    # Overlay header
+    overlays = "vout"
     if header_text:
         filter_complex += f";[{overlays}][{idx}:v]overlay=(W-w)/2:0[vh]"
         overlays = "vh"; idx += 1
-    # Overlay watermark
-    # Overlay watermark (เฉพาะ 40% หลังของคลิป)
+
     if watermark_text:
         wm_start = duration * 0.5
         filter_complex += f";[{overlays}][{idx}:v]overlay=30:H-h-30:enable='between(t,{wm_start},{duration})'[vw]"
         overlays = "vw"; idx += 1
 
-    # Overlay last text (3s)
     filter_complex += f";[{overlays}][{idx}:v]overlay=0:0:enable='between(t,{duration-2},{duration})'[vout]"
 
     # ---------- Run ffmpeg ----------
     cmd = ["ffmpeg","-y","-i", str(inp)]
-    for l in layers: cmd.extend(l.split())
+    for l in layers:
+        cmd.extend(l.split())
     cmd.extend([
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-        "-s", f"{TARGET_W}x{TARGET_H}",
-        "-c:v","libx264","-preset","veryfast","-crf","18",
+        "-c:v","libx264","-preset","slow","-crf","18",
         "-c:a","aac","-b:a","192k",
         "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
+
 
 
 
