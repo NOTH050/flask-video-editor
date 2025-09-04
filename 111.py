@@ -347,6 +347,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     filter_complex += f";[{overlays}][{idx}:v]overlay=0:0:enable='between(t,{duration-2},{duration})'[vout]"
 
     # ---------- Run ffmpeg ----------
+  
     cmd = ["ffmpeg","-y","-i", str(inp)]
     for l in layers:
         cmd.extend(l.split())
@@ -355,8 +356,9 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
         "-c:v","libx264","-preset","veryfast","-crf","23",
-        "-threads","0",
-        "-c:a","aac","-b:a","192k",
+        "-c:a","aac","-b:a","128k",
+        "-max_muxing_queue_size","1024",
+        "-bufsize","1M",
         "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
