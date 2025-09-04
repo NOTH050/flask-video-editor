@@ -357,7 +357,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-        "-c:v","libx264","-preset","veryfast","-crf","23",
+        "-c:v","libx264","-preset","slow","-crf","18",
         "-c:a","aac","-b:a","192k",
         "-movflags","+faststart", str(outp),
     ])
