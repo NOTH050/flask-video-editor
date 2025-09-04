@@ -249,7 +249,12 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
         f"[vs]pad={TARGET_W}:{TARGET_H+shift_px}:0:{shift_px}:black[vp];"
         f"[vp]crop={TARGET_W}:{TARGET_H}:0:0"
     )
-    cmd = ["ffmpeg","-y","-i", str(video_path),"-vf", filter_complex,"-frames:v","1", str(tmp_frame)]
+    cmd = [
+    "ffmpeg", "-y", "-i", str(video_path),
+    "-vf", filter_complex,
+    "-frames:v", "1", "-update", "1", str(tmp_frame)
+    ]
+
     subprocess.run(cmd, check=True)
 
     base = Image.open(tmp_frame).convert("RGBA")
