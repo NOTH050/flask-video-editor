@@ -21,7 +21,7 @@ BASE_OUTDIR.mkdir(parents=True, exist_ok=True)
 TARGET_W   = 1080
 TARGET_H   = 1920
 TEXT_COLOR = (0, 0, 0, 255)   # ฟอนต์สีดำ
-FONT_PATH  = "fonts/KanchaStay.ttf"  # ฟอนต์ในโฟลเดอร์ fonts
+FONT_PATH  = "KanchaStay.ttf"  # ฟอนต์ในโฟลเดอร์ fonts
 
 # ===== Default Layout Config =====
 LINE_SPACING    = 12   # ระยะห่างบรรทัด (px)
