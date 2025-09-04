@@ -331,10 +331,10 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
 
     # ---------- Base filter ----------
     filter_complex = (
-        f"[0:v]scale=w={TARGET_W}:h={TARGET_H},setpts={1.0/playback_speed}*PTS[vs];"
-        f"[vs]pad={TARGET_W}:{TARGET_H+shift_down}:0:{shift_down}:black[vp];"
-        f"[vp]crop={TARGET_W}:{TARGET_H}:0:0,"
-        f"drawbox=x=0:y=0:w={TARGET_W}:h={white_h}:color=white:t=fill[vbase]"
+        f"[0:v]setpts={1.0/playback_speed}*PTS,"
+        f"scale=720:1280:force_original_aspect_ratio=decrease,"
+        f"pad=720:1280:(ow-iw)/2:(oh-ih)/2:black[vp];"
+        f"[vp]drawbox=x=0:y=0:w=720:h={white_h}:color=white:t=fill[vbase]"
     )
 
     overlays = "vout"
