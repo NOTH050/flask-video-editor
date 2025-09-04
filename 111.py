@@ -287,15 +287,16 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
                         watermark_text: str = "", line_spacing:int=LINE_SPACING,
                         bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
 
-    TARGET_W, TARGET_H = 720, 1280  # ✅ fix ขนาด 720x1280
+    TARGET_W, TARGET_H = 720, 1280
 
     white_h = int(TARGET_H * (white_bar_pct / 100.0))
-    shift_down = int(TARGET_H * (shift_down_pct / 100.0))
 
+    duration = get_video_duration(inp)
+
+    # ---------- สร้าง PNG สำหรับ overlay ----------
     layers = []
     idx = 1
 
-    # ---------- Header ----------
     if header_text:
         header_png = outp.with_name("header.png")
         dummy = Image.new("RGBA", (TARGET_W, white_h), (255,255,255,0))
@@ -305,7 +306,6 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(header_png)
         layers.append(f"-i {header_png}")
 
-    # ---------- Watermark ----------
     if watermark_text:
         wm_png = outp.with_name("watermark.png")
         dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
@@ -314,15 +314,12 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(wm_png)
         layers.append(f"-i {wm_png}")
 
-    # ---------- Last 2s text ----------
-    duration = get_video_duration(inp)
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
     d = ImageDraw.Draw(dummy)
     font = ImageFont.truetype(FONT_PATH, 50)
     msg = "พิกัดสินค้าคลิกเลย"
-    bbox = d.textbbox((0,0), msg, font=font)
-    tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
+    tw, th = d.textbbox((0,0), msg, font=font)[2:]
     x = TARGET_W - tw - 70
     y = int(TARGET_H * 0.80)
     d.text((x,y), msg, font=font, fill=(255,255,255,255))
@@ -332,9 +329,9 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     # ---------- Base filter ----------
     filter_complex = (
         f"[0:v]setpts={1.0/playback_speed}*PTS,"
-        f"scale=720:1280:force_original_aspect_ratio=decrease,"
-        f"pad=720:1280:(ow-iw)/2:(oh-ih)/2:black[vp];"
-        f"[vp]drawbox=x=0:y=0:w=720:h={white_h}:color=white:t=fill[vbase]"
+        f"scale={TARGET_W}:{TARGET_H}:force_original_aspect_ratio=decrease,"
+        f"pad={TARGET_W}:{TARGET_H}:(ow-iw)/2:(oh-ih)/2:black,"
+        f"drawbox=x=0:y=0:w={TARGET_W}:h={white_h}:color=white:t=fill[vout]"
     )
 
     overlays = "vout"
@@ -357,11 +354,13 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-        "-c:v","libx264","-preset","slow","-crf","18",
+        "-c:v","libx264","-preset","veryfast","-crf","23",
+        "-threads","0",
         "-c:a","aac","-b:a","192k",
         "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
+
 
 
 
