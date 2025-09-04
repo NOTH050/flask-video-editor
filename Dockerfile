@@ -16,12 +16,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ✅ คัดลอกไฟล์โปรเจกต์ทั้งหมด
+# ✅ คัดลอกไฟล์โปรเจกต์ทั้งหมด (รวม KanchaStay.ttf ด้วย)
 COPY . .
 
-# ✅ เพิ่มฟอนต์ KanchaStay.ttf ลง system font
+# ✅ ย้ายฟอนต์ KanchaStay.ttf ไป system fonts
 RUN mkdir -p /usr/share/fonts/truetype/custom && \
-    cp fonts/KanchaStay.ttf /usr/share/fonts/truetype/custom/ && \
+    cp KanchaStay.ttf /usr/share/fonts/truetype/custom/ && \
     fc-cache -f -v
 
 # ✅ Port ที่ Flask จะใช้
@@ -29,4 +29,3 @@ EXPOSE 8080
 
 # ✅ Run Flask app ด้วย Gunicorn
 CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "--workers", "2"]
-
