@@ -388,40 +388,32 @@ def index():
 @app.route("/preview", methods=["POST"])
 def preview_route():
     try:
-        urls_raw = ""
-        upload_file = None
+        urls_raw = (request.form.get("urls") or "").strip()
+        upload_file = request.files.get("upload_file")
 
-        # ✅ รองรับ JSON
-        if request.is_json:
-            data = request.get_json(silent=True) or {}
-            urls_raw = (data.get("urls") or "").strip()
-        else:
-            urls_raw = (request.form.get("urls") or "").strip()
-            upload_file = request.files.get("upload_file")
+        # --- ใช้ไฟล์ชั่วคราว (ไม่ต้องโหลดใหม่ทุกครั้ง)
+        cache_dir = BASE_OUTDIR / "cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        video = cache_dir / "preview.mp4"
 
-        if not urls_raw and not upload_file:
-            abort(400, "ต้องใส่ลิงก์หรืออัปโหลดไฟล์")
-
-        stamp = time.strftime("%Y%m%d_%H%M%S")
-        outdir = BASE_OUTDIR / (stamp + "_preview")
-        outdir.mkdir(parents=True, exist_ok=True)
-
-        if urls_raw:
+        if upload_file:
+            # ถ้ามีอัปโหลดใหม่ → เขียนทับไฟล์ cache
+            upload_file.save(video)
+        elif urls_raw and not video.exists():
+            # ถ้ามีลิงก์และยังไม่มี cache → โหลดครั้งเดียว
             url = urls_raw.splitlines()[0].strip()
-            ydl_opts = get_ydl_opts(outdir)
-            try:
-                with YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
-            except Exception as e:
-                abort(500, f"โหลดวิดีโอไม่สำเร็จ: {e}")
-            raw_files = sorted(outdir.glob("*.*"))
+            ydl_opts = get_ydl_opts(cache_dir)
+            with YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            raw_files = sorted(cache_dir.glob("*.*"))
             if not raw_files:
                 abort(500, "โหลดวิดีโอไม่สำเร็จ")
-            video = raw_files[0]
-        else:
-            video = outdir / safe_name(upload_file.filename)
-            upload_file.save(video)
+            raw_files[0].rename(video)
 
+        if not video.exists():
+            abort(400, "ไม่มีไฟล์พรีวิว")
+
+        # --- ข้อมูลฟอร์ม
         header_text = (request.form.get("header_text") or "").strip()
         watermark_text = (request.form.get("watermark_text") or "").strip()
         white_bar = int(request.form.get("white_bar", 30))
@@ -430,6 +422,7 @@ def preview_route():
         bottom_margin = int(request.form.get("bottom_margin", BOTTOM_MARGIN))
         playback_speed = float(request.form.get("playback_speed", 1.0))
 
+        # --- ใช้แค่เฟรมแรก ไม่ encode ทั้งไฟล์
         out = preview_frame(video, header_text, white_bar, shift_down,
                             watermark_text, line_spacing, bottom_margin,
                             playback_speed)
@@ -438,6 +431,7 @@ def preview_route():
     except Exception as e:
         app.logger.error(f"[Preview Error] {e}")
         return jsonify({"error": str(e)}), 500
+
 
 
 # ✅ DOWNLOAD
