@@ -82,7 +82,7 @@ HTML = """
     <input type="range" name="shift_down" min="0" max="40" step="5" value="10" oninput="shift_val.value = this.value + '%'">
 
     <div class="label-inline"><label>ระยะห่างบรรทัด </label><output id="line_val">12px</output></div>
-    <input type="range" name="line_spacing" min="1" max="40" step="1" value="12" oninput="line_val.value = this.value + 'px'">
+    <input type="range" name="line_spacing" min="1" max="60" step="2" value="12" oninput="line_val.value = this.value + 'px'">
 
     <div class="label-inline"><label>ระยะห่างจากขอบล่าง </label><output id="bottom_val">70px</output></div>
     <input type="range" name="bottom_margin" min="10" max="200" step="5" value="70" oninput="bottom_val.value = this.value + 'px'">
@@ -324,7 +324,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     d = ImageDraw.Draw(dummy)
 
     # ✅ ลดขนาดฟอนต์ท้ายคลิป
-    font = ImageFont.truetype(FONT_PATH, 32)
+    font = ImageFont.truetype(FONT_PATH, 48)
 
     msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
     bbox = d.textbbox((0,0), msg, font=font)
@@ -372,8 +372,8 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     
         # ✅ ปรับคุณภาพ
         "-c:v","libx264",
-        "-preset","veryfast",     # encode ช้ากว่า แต่คมกว่า
-        "-crf","20",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
+        "-preset","slow",     # encode ช้ากว่า แต่คมกว่า
+        "-crf","18",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
     
         "-c:a","aac","-b:a","128k",
         "-threads","1",
