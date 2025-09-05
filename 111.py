@@ -322,19 +322,14 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
     d = ImageDraw.Draw(dummy)
-
-    # ✅ ลดขนาดฟอนต์ท้ายคลิป
     font = ImageFont.truetype(FONT_PATH, 48)
 
     msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
     bbox = d.textbbox((0,0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
-    # กลางแนวนอน
     x = (TARGET_W - tw) // 2
-    # สูงจากขอบล่าง 25%
     y = TARGET_H - int(TARGET_H * 0.10) - th
-
     d.text((x, y), msg, font=font, fill=(255,255,255,255))
     dummy.save(last_text_png)
     layers.append(f"-i {last_text_png}")
@@ -361,20 +356,19 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
 
     # ---------- Run ffmpeg ----------
     cmd = ["ffmpeg","-y","-i", str(inp)]
-    for l in layers: cmd.extend(l.split())
-
-    
-      cmd.extend([
+    for l in layers:
+        cmd.extend(l.split())
+    cmd.extend([
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
         "-c:v","libx264",
-        "-preset","veryfast",
-        "-crf","18",
+        "-preset","slow",   # encode ช้ากว่า แต่คม
+        "-crf","18",        # ชัดใกล้เคียงต้นฉบับ
         "-c:a","aac","-b:a","128k",
         "-threads","2",
         "-movflags","+faststart", str(outp),
-      ])
+    ])
     subprocess.run(cmd, check=True)
 
 
