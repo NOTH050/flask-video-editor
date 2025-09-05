@@ -242,6 +242,10 @@ def add_watermark_text(draw, text, font_path, box_w, box_h,
 def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down: int,
                   watermark_text: str = "", line_spacing:int=LINE_SPACING,
                   bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
+
+    # ✅ ใช้ขนาดเดียวกับ process_with_ffmpeg
+    TARGET_W, TARGET_H = 720, 1280
+
     tmp_frame = video_path.with_suffix(".tmp.jpg")
     shift_px = int(TARGET_H * shift_down / 100)
     filter_complex = (
@@ -250,11 +254,10 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
         f"[vp]crop={TARGET_W}:{TARGET_H}:0:0"
     )
     cmd = [
-    "ffmpeg", "-y", "-i", str(video_path),
-    "-vf", filter_complex,
-    "-frames:v", "1", "-update", "1", str(tmp_frame)
+        "ffmpeg", "-y", "-i", str(video_path),
+        "-vf", filter_complex,
+        "-frames:v", "1", "-update", "1", str(tmp_frame)
     ]
-
     subprocess.run(cmd, check=True)
 
     base = Image.open(tmp_frame).convert("RGBA")
@@ -276,6 +279,7 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
     result.save(out)
     return out
 
+
 def get_video_duration(path: Path) -> float:
     cmd = ["ffprobe", "-v", "error","-show_entries", "format=duration","-of", "default=noprint_wrappers=1:nokey=1",str(path)]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -287,16 +291,15 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
                         watermark_text: str = "", line_spacing:int=LINE_SPACING,
                         bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
 
-    TARGET_W, TARGET_H = 720, 1280
+    TARGET_W, TARGET_H = 720, 1280  # ✅ ใช้เหมือน preview
 
     white_h = int(TARGET_H * (white_bar_pct / 100.0))
-
     duration = get_video_duration(inp)
 
-    # ---------- สร้าง PNG สำหรับ overlay ----------
     layers = []
     idx = 1
 
+    # ---------- Header ----------
     if header_text:
         header_png = outp.with_name("header.png")
         dummy = Image.new("RGBA", (TARGET_W, white_h), (255,255,255,0))
@@ -306,6 +309,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(header_png)
         layers.append(f"-i {header_png}")
 
+    # ---------- Watermark ----------
     if watermark_text:
         wm_png = outp.with_name("watermark.png")
         dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
@@ -314,19 +318,22 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(wm_png)
         layers.append(f"-i {wm_png}")
 
+    # ---------- Last text ----------
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
     d = ImageDraw.Draw(dummy)
-    font = ImageFont.truetype(FONT_PATH, 38)
+
+    # ✅ ลดขนาดฟอนต์ท้ายคลิป
+    font = ImageFont.truetype(FONT_PATH, 24)
+
     msg = "พิกัดสินค้าในคอมเมนต์เลย"
     bbox = d.textbbox((0,0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
-    # ✅ ให้อยู่ตรงกลางแนวนอน
+    # กลางแนวนอน
     x = (TARGET_W - tw) // 2
-
-    # ✅ สูงจากขอบล่าง 25%
-    y = TARGET_H - int(TARGET_H * 0.10) - th
+    # สูงจากขอบล่าง 25%
+    y = TARGET_H - int(TARGET_H * 0.25) - th
 
     d.text((x, y), msg, font=font, fill=(255,255,255,255))
     dummy.save(last_text_png)
@@ -353,21 +360,20 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     filter_complex += f";[{overlays}][{idx}:v]overlay=0:0:enable='between(t,{duration-2},{duration})'[vout]"
 
     # ---------- Run ffmpeg ----------
-  
     cmd = ["ffmpeg","-y","-i", str(inp)]
-    for l in layers:
-        cmd.extend(l.split())
+    for l in layers: cmd.extend(l.split())
     cmd.extend([
-            "-filter_complex", filter_complex,
-            "-map", "[vout]", "-map", "0:a?",
-            "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-            "-s", f"{TARGET_W}x{TARGET_H}",
-            "-c:v","libx264","-preset","ultrafast","-crf","23",
-            "-c:a","aac","-b:a","128k",
-            "-threads","1",   # ✅ ลด RAM ใช้แค่ core เดียว
-            "-movflags","+faststart", str(outp),
+        "-filter_complex", filter_complex,
+        "-map", "[vout]", "-map", "0:a?",
+        "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
+        "-s", f"{TARGET_W}x{TARGET_H}",
+        "-c:v","libx264","-preset","ultrafast","-crf","23",
+        "-c:a","aac","-b:a","128k",
+        "-threads","1",
+        "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
+
 
 
 
