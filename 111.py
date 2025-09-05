@@ -367,18 +367,16 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
     
-        # ❌ ลบ -s ออก (เพราะ scale/pad ทำไปแล้วใน filter_complex)
-        # "-s", f"{TARGET_W}x{TARGET_H}",
+        "-c:v", "libx264",
+        "-preset", "faster",      # ✅ encode เร็วกว่า (จาก slow → faster)
+        "-crf", "18",             # ✅ คุณภาพสูง เกือบ lossless
+        "-tune", "fastdecode",    # ✅ ปรับให้ถอดรหัสเร็ว เหมาะกับ streaming
+        "-pix_fmt", "yuv420p",    # ✅ รองรับทุก player/social
     
-        # ✅ ปรับคุณภาพ
-        "-c:v","libx264",
-        "-preset","slow",     # encode ช้ากว่า แต่คมกว่า
-        "-crf","18",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
-    
-        "-c:a","aac","-b:a","128k",
-        "-threads","1",
-        "-movflags","+faststart", str(outp),
-        ])
+        "-c:a", "aac", "-b:a", "128k",
+        "-threads", "2",          # ✅ ใช้ 2 thread ทำงานไวขึ้น
+        "-movflags", "+faststart",
+        str(outp),
     subprocess.run(cmd, check=True)
 
 
