@@ -76,10 +76,10 @@ HTML = """
     </div>
 
     <div class="label-inline"><label>ความสูงขอบขาว </label><output id="white_val">30%</output></div>
-    <input type="range" name="white_bar" min="20" max="40" step="5" value="30" oninput="white_val.value = this.value + '%'">
+    <input type="range" name="white_bar" min="20" max="40" step="2" value="30" oninput="white_val.value = this.value + '%'">
 
     <div class="label-inline"><label>เลื่อนคลิปลง </label><output id="shift_val">10%</output></div>
-    <input type="range" name="shift_down" min="0" max="40" step="5" value="10" oninput="shift_val.value = this.value + '%'">
+    <input type="range" name="shift_down" min="0" max="40" step="2" value="10" oninput="shift_val.value = this.value + '%'">
 
     <div class="label-inline"><label>ระยะห่างบรรทัด </label><output id="line_val">12px</output></div>
     <input type="range" name="line_spacing" min="1" max="60" step="2" value="12" oninput="line_val.value = this.value + 'px'">
@@ -363,7 +363,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
         "-c:v","libx264",
-        "-preset","slow",   # encode ช้ากว่า แต่คม
+        "-preset","veryfast",   # encode ช้ากว่า แต่คม
         "-crf","18",        # ชัดใกล้เคียงต้นฉบับ
         "-c:a","aac","-b:a","128k",
         "-threads","2",
