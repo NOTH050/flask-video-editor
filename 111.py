@@ -366,7 +366,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     filter_complex = (
         f"[0:v]setpts={1.0/playback_speed}*PTS,"
         f"scale={TARGET_W}:{TARGET_H}:force_original_aspect_ratio=decrease,"
-        f"pad={TARGET_W}:{TARGET_H}:(ow-iw)/2:(oh-ih)/2:black,"
+        f"pad={TARGET_W}:{TARGET_H}:(ow-iw)/2:(oh-ih)/2,"
         f"drawbox=x=0:y=0:w={TARGET_W}:h={white_h}:color=white:t=fill[vout]"
     )
 
