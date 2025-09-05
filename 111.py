@@ -381,84 +381,142 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
 
 
 # --------------- Routes ---------------
+# --------------- Routes ---------------
 @app.route("/", methods=["GET"])
-def index(): return render_template_string(HTML)
+def index():
+    return render_template_string(HTML)
 
+
+# ✅ PREVIEW
 @app.route("/preview", methods=["POST"])
 def preview_route():
-    urls_raw = (request.form.get("urls") or "").strip()
-    upload_file = request.files.get("upload_file")
-    if not urls_raw and not upload_file: abort(400,"ต้องใส่ลิงก์หรืออัปโหลดไฟล์")
+    try:
+        urls_raw = ""
+        upload_file = None
 
-    stamp = time.strftime("%Y%m%d_%H%M%S"); outdir = BASE_OUTDIR/(stamp+"_preview"); outdir.mkdir(parents=True, exist_ok=True)
-    if urls_raw:
-        url = urls_raw.splitlines()[0].strip(); ydl_opts = get_ydl_opts(outdir)
-        try:
-            with YoutubeDL(ydl_opts) as ydl: ydl.download([url])
-        except Exception as e: abort(500,f"โหลดวิดีโอไม่สำเร็จ: {e}")
-        raw_files = sorted(outdir.glob("*.*"))
-        if not raw_files: abort(500,"โหลดวิดีโอไม่สำเร็จ")
-        video = raw_files[0]
-    else:
-        video = outdir/safe_name(upload_file.filename); upload_file.save(video)
+        # ✅ รองรับ JSON
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+            urls_raw = (data.get("urls") or "").strip()
+        else:
+            urls_raw = (request.form.get("urls") or "").strip()
+            upload_file = request.files.get("upload_file")
 
-    header_text = (request.form.get("header_text") or "").strip()
-    watermark_text = (request.form.get("watermark_text") or "").strip()
-    white_bar = int(request.form.get("white_bar", 30))
-    shift_down = int(request.form.get("shift_down", 20))
-    line_spacing = int(request.form.get("line_spacing", LINE_SPACING))
-    bottom_margin = int(request.form.get("bottom_margin", BOTTOM_MARGIN))
-    playback_speed = float(request.form.get("playback_speed", 1.0))
+        if not urls_raw and not upload_file:
+            abort(400, "ต้องใส่ลิงก์หรืออัปโหลดไฟล์")
 
-    out = preview_frame(video, header_text, white_bar, shift_down,
-                        watermark_text, line_spacing, bottom_margin,
-                        playback_speed)
-    return send_file(out, mimetype="image/png")
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        outdir = BASE_OUTDIR / (stamp + "_preview")
+        outdir.mkdir(parents=True, exist_ok=True)
 
-@app.route("/download", methods=["POST"])
-def download_route():
-    urls_raw = (request.form.get("urls") or "").strip()
-    upload_file = request.files.get("upload_file")
-    header_text = (request.form.get("header_text") or "").strip()
-    watermark_text = (request.form.get("watermark_text") or "").strip()
-    white_bar = int(request.form.get("white_bar", 30))
-    shift_down = int(request.form.get("shift_down", 20))
-    line_spacing = int(request.form.get("line_spacing", LINE_SPACING))
-    bottom_margin = int(request.form.get("bottom_margin", BOTTOM_MARGIN))
-    playback_speed = float(request.form.get("playback_speed", 1.0))
+        if urls_raw:
+            url = urls_raw.splitlines()[0].strip()
+            ydl_opts = get_ydl_opts(outdir)
+            try:
+                with YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+            except Exception as e:
+                abort(500, f"โหลดวิดีโอไม่สำเร็จ: {e}")
+            raw_files = sorted(outdir.glob("*.*"))
+            if not raw_files:
+                abort(500, "โหลดวิดีโอไม่สำเร็จ")
+            video = raw_files[0]
+        else:
+            video = outdir / safe_name(upload_file.filename)
+            upload_file.save(video)
 
-    urls = [u.strip() for u in urls_raw.splitlines() if u.strip()]
-    stamp = time.strftime("%Y%m%d_%H%M%S"); outdir = BASE_OUTDIR/stamp
-    rawdir, prodir = outdir/"raw", outdir/"processed"; rawdir.mkdir(parents=True, exist_ok=True); prodir.mkdir(parents=True, exist_ok=True)
+        header_text = (request.form.get("header_text") or "").strip()
+        watermark_text = (request.form.get("watermark_text") or "").strip()
+        white_bar = int(request.form.get("white_bar", 30))
+        shift_down = int(request.form.get("shift_down", 20))
+        line_spacing = int(request.form.get("line_spacing", LINE_SPACING))
+        bottom_margin = int(request.form.get("bottom_margin", BOTTOM_MARGIN))
+        playback_speed = float(request.form.get("playback_speed", 1.0))
 
-    raw_files = []
-    if urls:
-        ydl_opts = get_ydl_opts(rawdir)
-        try:
-            with YoutubeDL(ydl_opts) as ydl: ydl.download(urls)
-        except Exception as e: abort(500,f"โหลดวิดีโอไม่สำเร็จ: {e}")
-        raw_files = [p for p in rawdir.glob("*.*") if p.suffix.lower() in {".mp4",".mov",".mkv",".webm"}]
-    if upload_file:
-        local_file = rawdir/safe_name(upload_file.filename); upload_file.save(local_file); raw_files.append(local_file)
-    if not raw_files: abort(500,"ไม่มีวิดีโอให้ตัดต่อ")
-
-    processed = []
-    for f in raw_files:
-        outp = prodir/(safe_name(f.stem)+"_edited.mp4")
-        process_with_ffmpeg(f, outp, header_text, white_bar, shift_down,
+        out = preview_frame(video, header_text, white_bar, shift_down,
                             watermark_text, line_spacing, bottom_margin,
                             playback_speed)
-        if outp.exists() and outp.stat().st_size > 0: processed.append(outp)
+        return send_file(out, mimetype="image/png")
 
-    if not processed: abort(500,"ตัดต่อไม่สำเร็จทุกไฟล์")
-    if len(processed)==1: return send_file(processed[0],as_attachment=True,download_name=processed[0].name)
+    except Exception as e:
+        app.logger.error(f"[Preview Error] {e}")
+        return jsonify({"error": str(e)}), 500
 
-    zip_path = prodir.with_suffix(".zip")
-    with ZipFile(zip_path,"w") as z:
-        for p in processed: z.write(p,arcname=p.name)
-    return send_file(zip_path,as_attachment=True,download_name=zip_path.name)
+
+# ✅ DOWNLOAD
+@app.route("/download", methods=["POST"])
+def download_route():
+    try:
+        urls_raw = ""
+        upload_file = None
+
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+            urls_raw = (data.get("urls") or "").strip()
+        else:
+            urls_raw = (request.form.get("urls") or "").strip()
+            upload_file = request.files.get("upload_file")
+
+        header_text = (request.form.get("header_text") or "").strip()
+        watermark_text = (request.form.get("watermark_text") or "").strip()
+        white_bar = int(request.form.get("white_bar", 30))
+        shift_down = int(request.form.get("shift_down", 20))
+        line_spacing = int(request.form.get("line_spacing", LINE_SPACING))
+        bottom_margin = int(request.form.get("bottom_margin", BOTTOM_MARGIN))
+        playback_speed = float(request.form.get("playback_speed", 1.0))
+
+        urls = [u.strip() for u in urls_raw.splitlines() if u.strip()]
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        outdir = BASE_OUTDIR / stamp
+        rawdir, prodir = outdir / "raw", outdir / "processed"
+        rawdir.mkdir(parents=True, exist_ok=True)
+        prodir.mkdir(parents=True, exist_ok=True)
+
+        raw_files = []
+        if urls:
+            ydl_opts = get_ydl_opts(rawdir)
+            try:
+                with YoutubeDL(ydl_opts) as ydl:
+                    ydl.download(urls)
+            except Exception as e:
+                abort(500, f"โหลดวิดีโอไม่สำเร็จ: {e}")
+            raw_files = [p for p in rawdir.glob("*.*")
+                         if p.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm"}]
+        if upload_file:
+            local_file = rawdir / safe_name(upload_file.filename)
+            upload_file.save(local_file)
+            raw_files.append(local_file)
+
+        if not raw_files:
+            abort(500, "ไม่มีวิดีโอให้ตัดต่อ")
+
+        processed = []
+        for f in raw_files:
+            outp = prodir / (safe_name(f.stem) + "_edited.mp4")
+            process_with_ffmpeg(f, outp, header_text, white_bar, shift_down,
+                                watermark_text, line_spacing, bottom_margin,
+                                playback_speed)
+            if outp.exists() and outp.stat().st_size > 0:
+                processed.append(outp)
+
+        if not processed:
+            abort(500, "ตัดต่อไม่สำเร็จทุกไฟล์")
+        if len(processed) == 1:
+            return send_file(processed[0], as_attachment=True,
+                             download_name=processed[0].name)
+
+        zip_path = prodir.with_suffix(".zip")
+        with ZipFile(zip_path, "w") as z:
+            for p in processed:
+                z.write(p, arcname=p.name)
+        return send_file(zip_path, as_attachment=True,
+                         download_name=zip_path.name)
+
+    except Exception as e:
+        app.logger.error(f"[Download Error] {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # ✅ Render/Heroku จะส่งค่า PORT มาให้
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
