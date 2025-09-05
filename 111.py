@@ -50,7 +50,7 @@ HTML = """
   @media(max-width:600px){.row-two{grid-template-columns:1fr;}}
 </style>
 
-<h1>Instagram Downloader1</h1>
+<h1>Instagram Downloader</h1>
 <div class="card">
   <form method="post" action="/download" enctype="multipart/form-data" class="row" id="mainForm" onsubmit="setTimeout(()=>this.reset(),500)">
 
@@ -69,7 +69,7 @@ HTML = """
           <option value="">-- ไม่ใส่ --</option>
           <option value="Dewyรีวิว">Dewyรีวิว</option>
           <option value="พิกัดจัดให้">พิกัดจัดให้</option>
-          <option value="จิ้มลิงก์สิคะ">เกมบันเทิง</option>
+          <option value="จิ้มลิงก์สิคะ">จิ้มลิงก์สิคะ</option>
           <option value="สู้ๆนะ">สู้ๆนะ</option>
         </select>
       </div>
@@ -329,7 +329,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
     x = (TARGET_W - tw) // 2
-    y = TARGET_H - int(TARGET_H * 0.10) - th
+    y = TARGET_H - int(TARGET_H * 0.15) - th
     d.text((x, y), msg, font=font, fill=(255,255,255,255))
     dummy.save(last_text_png)
     layers.append(f"-i {last_text_png}")
