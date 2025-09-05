@@ -317,12 +317,18 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
     d = ImageDraw.Draw(dummy)
-    font = ImageFont.truetype(FONT_PATH, 50)
-    msg = "พิกัดสินค้าคลิกเลย"
-    tw, th = d.textbbox((0,0), msg, font=font)[2:]
-    x = TARGET_W - tw - 70
-    y = int(TARGET_H * 0.80)
-    d.text((x,y), msg, font=font, fill=(255,255,255,255))
+    font = ImageFont.truetype(FONT_PATH, 55)
+    msg = "พิกัดสินค้าในคอมเมนต์เลย"
+    bbox = d.textbbox((0,0), msg, font=font)
+    tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
+
+    # ✅ ให้อยู่ตรงกลางแนวนอน
+    x = (TARGET_W - tw) // 2
+
+    # ✅ สูงจากขอบล่าง 25%
+    y = TARGET_H - int(TARGET_H * 0.10) - th
+
+    d.text((x, y), msg, font=font, fill=(255,255,255,255))
     dummy.save(last_text_png)
     layers.append(f"-i {last_text_png}")
 
@@ -352,14 +358,14 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     for l in layers:
         cmd.extend(l.split())
     cmd.extend([
-        "-filter_complex", filter_complex,
-        "-map", "[vout]", "-map", "0:a?",
-        "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-        "-c:v","libx264","-preset","veryfast","-crf","23",
-        "-c:a","aac","-b:a","128k",
-        "-max_muxing_queue_size","1024",
-        "-bufsize","1M",
-        "-movflags","+faststart", str(outp),
+            "-filter_complex", filter_complex,
+            "-map", "[vout]", "-map", "0:a?",
+            "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
+            "-s", f"{TARGET_W}x{TARGET_H}",
+            "-c:v","libx264","-preset","ultrafast","-crf","23",
+            "-c:a","aac","-b:a","128k",
+            "-threads","1",   # ✅ ลด RAM ใช้แค่ core เดียว
+            "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
 
