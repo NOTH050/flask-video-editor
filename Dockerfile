@@ -27,5 +27,5 @@ RUN mkdir -p /usr/share/fonts/truetype/custom && \
 # ✅ Port ที่ Flask จะใช้
 EXPOSE 8080
 
-# ✅ Run Flask app ด้วย Gunicorn
-CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "--workers", "2"]
+# ✅ Run Flask app ด้วย Gunicorn (เพิ่ม timeout, ใช้ gevent)
+CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "-w", "1", "-k", "gevent", "-t", "900", "--threads", "1"]
