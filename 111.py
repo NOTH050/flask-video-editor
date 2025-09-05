@@ -331,32 +331,42 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         layers.append(f"-i {wm_png}")
 
     # ---------- Last text ----------
-    last_text_png = outp.with_name("last_text.png")
-    dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
-    d = ImageDraw.Draw(dummy)
+    msg = "พิกัดสินค้าในคอมเมนต์เลย"
     font = ImageFont.truetype(FONT_PATH, 48)
 
-    msg = "พิกัดสินค้าในคอมเมนต์เลย"
-    bbox = d.textbbox((0,0), msg, font=font)
+    # วัดขนาดข้อความ
+    dummy = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+    d = ImageDraw.Draw(dummy)
+    bbox = d.textbbox((0, 0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
-    x = (TARGET_W - tw) // 2
-    y = TARGET_H - int(TARGET_H * 0.15) - th
+    # สร้างภาพขนาดข้อความ + padding
+    padding = 20
+    text_img = Image.new("RGBA", (tw+padding*2, th+padding*2), (0, 0, 0, 0))
+    td = ImageDraw.Draw(text_img)
 
     # ✅ เงาฟุ้งรอบข้อความ
-    shadow_color = (0, 0, 0, 150)  # ดำโปร่งใส
-    shadow_range = 2               # ความหนาของเงา (px)
+    shadow_color = (0, 0, 0, 150)
+    shadow_range = 2
     for dx in range(-shadow_range, shadow_range+1):
         for dy in range(-shadow_range, shadow_range+1):
             if dx == 0 and dy == 0:
                 continue
-            d.text((x+dx, y+dy), msg, font=font, fill=shadow_color)
+            td.text((padding+dx, padding+dy), msg, font=font, fill=shadow_color)
 
     # ✅ ข้อความจริง
-    d.text((x, y), msg, font=font, fill=(255,255,255,255))
+    td.text((padding, padding), msg, font=font, fill=(255, 255, 255, 255))
 
-    dummy.save(last_text_png)
+    # เซฟภาพข้อความ
+    last_text_png = outp.with_name("last_text.png")
+    text_img.save(last_text_png)
     layers.append(f"-i {last_text_png}")
+
+    # ---------- Overlay ลงคลิป ----------
+    filter_complex += (
+        f";[{overlays}][{idx}:v]overlay=(W-w)/2:H-h-200:enable='between(t,{duration-2},{duration})'[vout]"
+    )
+
 
 
     # ---------- Base filter ----------
