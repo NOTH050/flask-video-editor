@@ -50,7 +50,7 @@ HTML = """
   @media(max-width:600px){.row-two{grid-template-columns:1fr;}}
 </style>
 
-<h1>Instagram Downloader1</h1>
+<h1>Instagram Downloader</h1>
 <div class="card">
   <form method="post" action="/download" enctype="multipart/form-data" class="row" id="mainForm" onsubmit="setTimeout(()=>this.reset(),500)">
 
@@ -82,10 +82,10 @@ HTML = """
     <input type="range" name="shift_down" min="0" max="40" step="5" value="10" oninput="shift_val.value = this.value + '%'">
 
     <div class="label-inline"><label>ระยะห่างบรรทัด </label><output id="line_val">12px</output></div>
-    <input type="range" name="line_spacing" min="5" max="40" step="1" value="12" oninput="line_val.value = this.value + 'px'">
+    <input type="range" name="line_spacing" min="1" max="40" step="1" value="12" oninput="line_val.value = this.value + 'px'">
 
     <div class="label-inline"><label>ระยะห่างจากขอบล่าง </label><output id="bottom_val">70px</output></div>
-    <input type="range" name="bottom_margin" min="20" max="200" step="5" value="70" oninput="bottom_val.value = this.value + 'px'">
+    <input type="range" name="bottom_margin" min="10" max="200" step="5" value="70" oninput="bottom_val.value = this.value + 'px'">
 
     <div class="label-inline"><label>ความเร็วคลิป </label><output id="speed_val">1.0x</output></div>
     <input type="range" name="playback_speed" min="0.8" max="1.5" step="0.1" value="1.0" oninput="speed_val.value = this.value + 'x'">
@@ -230,7 +230,7 @@ def draw_bottom_text(draw, text, font_path, box_w, box_h,
 
 
 def add_watermark_text(draw, text, font_path, box_w, box_h,
-                       margin_left=50, opacity=77, font_size=48):
+                       margin_left=50, opacity=77, font_size=35):
     if not text: return
     font = ImageFont.truetype(font_path, font_size)
     bbox = draw.textbbox((0,0), text, font=font)
@@ -324,7 +324,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     d = ImageDraw.Draw(dummy)
 
     # ✅ ลดขนาดฟอนต์ท้ายคลิป
-    font = ImageFont.truetype(FONT_PATH, 24)
+    font = ImageFont.truetype(FONT_PATH, 42)
 
     msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
     bbox = d.textbbox((0,0), msg, font=font)
@@ -333,7 +333,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     # กลางแนวนอน
     x = (TARGET_W - tw) // 2
     # สูงจากขอบล่าง 25%
-    y = TARGET_H - int(TARGET_H * 0.25) - th
+    y = TARGET_H - int(TARGET_H * 0.10) - th
 
     d.text((x, y), msg, font=font, fill=(255,255,255,255))
     dummy.save(last_text_png)
