@@ -5,10 +5,10 @@ import re
 import textwrap
 from pathlib import Path
 from zipfile import ZipFile
-from flask import Flask, request, render_template_string, send_file, abort
+from flask import Flask, request, render_template_string, send_file, abort, jsonify
 from yt_dlp import YoutubeDL
 from PIL import Image, ImageDraw, ImageFont
-
+from pilmoji import Pilmoji   # ✅ เพิ่มตรงนี้
 
 # --- ffmpeg PATH ---
 os.environ["PATH"] = r"C:\ffmpeg\bin;" + os.environ.get("PATH", "")
@@ -135,6 +135,7 @@ document.querySelectorAll("textarea, input[type=text], select, input[type=range]
   .forEach(el => el.addEventListener("input", updatePreview));
 
 
+
 // ✅ จัดการ Download
 form.addEventListener("submit", (e)=>{
   e.preventDefault();
@@ -195,7 +196,7 @@ def get_ydl_opts(outdir: Path):
     }
 
 # ---------------- Text & FFmpeg ----------------
-def draw_bottom_text(draw, text, font_path, box_w, box_h,
+def draw_bottom_text(img, text, font_path, box_w, box_h,
                      bottom_margin=BOTTOM_MARGIN,
                      side_margin=SIDE_MARGIN,
                      line_spacing=LINE_SPACING,
@@ -209,10 +210,10 @@ def draw_bottom_text(draw, text, font_path, box_w, box_h,
     sizes = []
     heights = []
 
+    # คำนวณขนาดฟอนต์
     for ln in lines:
-        # เริ่มจากฟอนต์ใหญ่สุด
         font = ImageFont.truetype(font_path, max_font)
-        bbox = draw.textbbox((0, 0), ln, font=font)
+        bbox = font.getbbox(ln)
         text_w = bbox[2] - bbox[0]
 
         if text_w == 0:
@@ -220,29 +221,28 @@ def draw_bottom_text(draw, text, font_path, box_w, box_h,
             heights.append(0)
             continue
 
-        # scale factor ปรับให้ข้อความเต็มความกว้าง usable_width
         scale = usable_width / text_w
         new_size = int(max_font * scale)
-
-        # จำกัดไม่ให้เล็กกว่า min_font หรือใหญ่กว่า max_font
         new_size = max(min_font, min(max_font, new_size))
 
         sizes.append(new_size)
         font_resized = ImageFont.truetype(font_path, new_size)
-        h = draw.textbbox((0, 0), ln, font=font_resized)[3]
+        h = font_resized.getbbox(ln)[3]
         heights.append(h)
 
     total_h = sum(heights) + (len(lines) - 1) * line_spacing
     y = box_h - bottom_margin - total_h
 
-    # วาดข้อความแต่ละบรรทัด
-    for ln, size, h in zip(lines, sizes, heights):
-        font = ImageFont.truetype(font_path, size)
-        bbox = draw.textbbox((0, 0), ln, font=font)
-        text_w = bbox[2] - bbox[0]
-        x = (box_w - text_w) // 2
-        draw.text((x, y), ln, font=font, fill=TEXT_COLOR)
-        y += h + line_spacing
+    # ✅ ใช้ Pilmoji แทน draw.text เพื่อรองรับ emoji
+    with Pilmoji(img, emoji_position_offset=(10, 30)) as pilmoji:  # ← x=3 ขยับขวา 3px, y=5 เลื่อนลง
+        for ln, size, h in zip(lines, sizes, heights):
+            font = ImageFont.truetype(font_path, size)
+            bbox = font.getbbox(ln)
+            text_w = bbox[2] - bbox[0]
+            x = (box_w - text_w) // 2
+
+            pilmoji.text((x, y), ln, font=font, fill=TEXT_COLOR)
+            y += h + line_spacing
 
 
 def add_watermark_text(draw, text, font_path, box_w, box_h,
@@ -259,7 +259,6 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
                   watermark_text: str = "", line_spacing:int=LINE_SPACING,
                   bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
 
-    # ✅ ใช้ขนาดเดียวกับ process_with_ffmpeg
     TARGET_W, TARGET_H = 1080, 1920
 
     tmp_frame = video_path.with_suffix(".tmp.jpg")
@@ -285,7 +284,7 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
     draw.rectangle([0, 0, W, white_h], fill=(255, 255, 255, 255))
 
     if header_text:
-        draw_bottom_text(draw, header_text, FONT_PATH, W, white_h,
+        draw_bottom_text(overlay, header_text, FONT_PATH, W, white_h,
                          bottom_margin=bottom_margin, line_spacing=line_spacing)
     if watermark_text:
         add_watermark_text(draw, watermark_text, FONT_PATH, W, H)
@@ -315,12 +314,11 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     layers = []
     idx = 1
 
-    # ---------- Header ----------
+    # ---------- Header ---------- ✅ แก้ให้ใช้ draw_bottom_text(img,..)
     if header_text:
         header_png = outp.with_name("header.png")
         dummy = Image.new("RGBA", (TARGET_W, white_h), (255,255,255,0))
-        d = ImageDraw.Draw(dummy)
-        draw_bottom_text(d, header_text, FONT_PATH, TARGET_W, white_h,
+        draw_bottom_text(dummy, header_text, FONT_PATH, TARGET_W, white_h,
                          bottom_margin=bottom_margin, line_spacing=line_spacing)
         dummy.save(header_png)
         layers.append(f"-i {header_png}")
@@ -340,7 +338,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     d = ImageDraw.Draw(dummy)
     font = ImageFont.truetype(FONT_PATH, 48)
 
-    msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
+    msg = "พิกัดสินค้าในคอมเมนต์เลย"
     bbox = d.textbbox((0,0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
@@ -379,18 +377,13 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
         "-c:v","libx264",
-        "-preset","veryfast",   # encode ช้ากว่า แต่คม
-        "-crf","18",        # ชัดใกล้เคียงต้นฉบับ
+        "-preset","veryfast",
+        "-crf","18",
         "-c:a","aac","-b:a","128k",
         "-threads","2",
         "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
-
-
-
-
-
 
 
 # --------------- Routes ---------------
@@ -447,6 +440,7 @@ def preview_route():
     except Exception as e:
         app.logger.error(f"[Preview Error] {e}")
         return jsonify({"error": str(e)}), 500
+
 
 
 
