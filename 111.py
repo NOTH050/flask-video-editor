@@ -234,7 +234,7 @@ def draw_bottom_text(img, text, font_path, box_w, box_h,
     y = box_h - bottom_margin - total_h
 
     # ✅ ใช้ Pilmoji แทน draw.text เพื่อรองรับ emoji
-    with Pilmoji(img, emoji_position_offset=(6, 22)) as pilmoji:  # ← x=3 ขยับขวา 3px, y=5 เลื่อนลง
+    with Pilmoji(img, emoji_position_offset=(10, 22)) as pilmoji:  # ← x=3 ขยับขวา 3px, y=5 เลื่อนลง
         for ln, size, h in zip(lines, sizes, heights):
             font = ImageFont.truetype(font_path, size)
             bbox = font.getbbox(ln)
@@ -347,7 +347,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
 
     # ✅ เงาฟุ้งรอบข้อความ
     shadow_color = (0, 0, 0, 150)  # ดำโปร่งใส
-    shadow_range = 4               # ความหนาของเงา (px)
+    shadow_range = 2               # ความหนาของเงา (px)
     for dx in range(-shadow_range, shadow_range+1):
         for dy in range(-shadow_range, shadow_range+1):
             if dx == 0 and dy == 0:
