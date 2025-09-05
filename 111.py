@@ -50,7 +50,7 @@ HTML = """
   @media(max-width:600px){.row-two{grid-template-columns:1fr;}}
 </style>
 
-<h1>Instagram Downloader</h1>
+<h1>Instagram Downloader1</h1>
 <div class="card">
   <form method="post" action="/download" enctype="multipart/form-data" class="row" id="mainForm" onsubmit="setTimeout(()=>this.reset(),500)">
 
