@@ -90,7 +90,8 @@ HTML = """
     <div class="label-inline"><label>ความเร็วคลิป </label><output id="speed_val">1.0x</output></div>
     <input type="range" name="playback_speed" min="0.8" max="1.5" step="0.1" value="1.0" oninput="speed_val.value = this.value + 'x'">
 
-    <button class="btn" type="submit">ตกลง (ดาวน์โหลด/อัปโหลด & ตัดต่อ)</button>
+    <button class="btn" type="submit" id="submitBtn">ตกลง (ดาวน์โหลด/อัปโหลด & ตัดต่อ)</button>
+
   </form>
 
 <img id="preview" src="" alt="Preview จะโชว์ตรงนี้">
@@ -103,21 +104,36 @@ HTML = """
 <script>
 const form = document.getElementById("mainForm");
 const previewImg = document.getElementById("preview");
+const submitBtn = document.getElementById("submitBtn");
 
-// ✅ อัพเดท Preview เมื่อมีการแก้ไขค่า
+// ✅ โหลด preview
 function updatePreview(){
   let data = new FormData(form);
+
+  // 🚫 ปิดปุ่มไว้ก่อน
+  submitBtn.disabled = true;
+  submitBtn.style.background = "#888";
+
   fetch("/preview", {method:"POST", body:data})
     .then(r => {
       if(!r.ok) throw new Error("Preview error");
       return r.blob();
     })
-    .then(b => { previewImg.src = URL.createObjectURL(b); })
-    .catch(err => console.error(err));
+    .then(b => { 
+      previewImg.src = URL.createObjectURL(b); 
+      // ✅ เปิดปุ่มเมื่อโหลดเสร็จ
+      submitBtn.disabled = false;
+      submitBtn.style.background = "#111";
+    })
+    .catch(err => {
+      console.error("Preview error:", err);
+      // ❌ ไม่ต้องแจ้ง error แค่ปุ่มยังเทาไว้
+    });
 }
 
 document.querySelectorAll("textarea, input[type=text], select, input[type=range], input[type=file]")
   .forEach(el => el.addEventListener("input", updatePreview));
+
 
 // ✅ จัดการ Download
 form.addEventListener("submit", (e)=>{
