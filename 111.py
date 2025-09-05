@@ -326,7 +326,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     # ✅ ลดขนาดฟอนต์ท้ายคลิป
     font = ImageFont.truetype(FONT_PATH, 24)
 
-    msg = "พิกัดสินค้าในคอมเมนต์เลย"
+    msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
     bbox = d.textbbox((0,0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
