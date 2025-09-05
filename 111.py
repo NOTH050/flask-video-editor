@@ -50,11 +50,9 @@ HTML = """
   @media(max-width:600px){.row-two{grid-template-columns:1fr;}}
 </style>
 
-<h1>Instagram Downloader</h1>
 <div class="card">
   <form method="post" action="/download" enctype="multipart/form-data" class="row" id="mainForm" onsubmit="setTimeout(()=>this.reset(),500)">
 
-    <label>ลิงก์ IG (บรรทัดละ 1) หรือ เลือกไฟล์วิดีโอจากเครื่อง</label>
     <textarea name="urls" rows="1" placeholder="https://www.instagram.com/reel/......./"></textarea>
     <input type="file" name="upload_file" accept="video/*">
 
