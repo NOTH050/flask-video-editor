@@ -312,7 +312,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     layers = []
     idx = 1
 
-    # ---------- Header ---------- ✅ แก้ให้ใช้ draw_bottom_text(img,..)
+    # ---------- Header ----------
     if header_text:
         header_png = outp.with_name("header.png")
         dummy = Image.new("RGBA", (TARGET_W, white_h), (255,255,255,0))
@@ -330,7 +330,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         dummy.save(wm_png)
         layers.append(f"-i {wm_png}")
 
-    # ---------- Last text ----------
+    # ---------- Last text (ข้อความท้าย) ----------
     msg = "พิกัดสินค้าในคอมเมนต์เลย"
     font = ImageFont.truetype(FONT_PATH, 48)
 
@@ -340,12 +340,12 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     bbox = d.textbbox((0, 0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
 
-    # สร้างภาพขนาดข้อความ + padding
+    # สร้างภาพเล็กพอดีข้อความ
     padding = 20
     text_img = Image.new("RGBA", (tw+padding*2, th+padding*2), (0, 0, 0, 0))
     td = ImageDraw.Draw(text_img)
 
-    # ✅ เงาฟุ้งรอบข้อความ
+    # เงาฟุ้งรอบข้อความ
     shadow_color = (0, 0, 0, 150)
     shadow_range = 2
     for dx in range(-shadow_range, shadow_range+1):
@@ -354,20 +354,13 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
                 continue
             td.text((padding+dx, padding+dy), msg, font=font, fill=shadow_color)
 
-    # ✅ ข้อความจริง
-    td.text((padding, padding), msg, font=font, fill=(255, 255, 255, 255))
+    # ข้อความจริง
+    td.text((padding, padding), msg, font=font, fill=(255,255,255,255))
 
-    # เซฟภาพข้อความ
+    # เซฟเป็นไฟล์ PNG
     last_text_png = outp.with_name("last_text.png")
     text_img.save(last_text_png)
     layers.append(f"-i {last_text_png}")
-
-    # ---------- Overlay ลงคลิป ----------
-    filter_complex += (
-        f";[{overlays}][{idx}:v]overlay=(W-w)/2:H-h-200:enable='between(t,{duration-2},{duration})'[vout]"
-    )
-
-
 
     # ---------- Base filter ----------
     filter_complex = (
@@ -387,7 +380,11 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         filter_complex += f";[{overlays}][{idx}:v]overlay=30:H-h-30:enable='between(t,{wm_start},{duration})'[vw]"
         overlays = "vw"; idx += 1
 
-    filter_complex += f";[{overlays}][{idx}:v]overlay=0:0:enable='between(t,{duration-2},{duration})'[vout]"
+    # ✅ overlay ข้อความท้าย 2 วิสุดท้าย
+    filter_complex += (
+        f";[{overlays}][{idx}:v]overlay=(W-w)/2:H-h-200:"
+        f"enable='between(t,{duration-2},{duration})'[vout]"
+    )
 
     # ---------- Run ffmpeg ----------
     cmd = ["ffmpeg","-y","-i", str(inp)]
@@ -405,6 +402,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-movflags","+faststart", str(outp),
     ])
     subprocess.run(cmd, check=True)
+
 
 
 # --------------- Routes ---------------
