@@ -50,7 +50,7 @@ HTML = """
   @media(max-width:600px){.row-two{grid-template-columns:1fr;}}
 </style>
 
-<h1>Instagram Downloader</h1>
+<h1>Instagram Downloader1</h1>
 <div class="card">
   <form method="post" action="/download" enctype="multipart/form-data" class="row" id="mainForm" onsubmit="setTimeout(()=>this.reset(),500)">
 
@@ -244,7 +244,7 @@ def preview_frame(video_path: Path, header_text: str, white_bar: int, shift_down
                   bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
 
     # ✅ ใช้ขนาดเดียวกับ process_with_ffmpeg
-    TARGET_W, TARGET_H = 720, 1280
+    TARGET_W, TARGET_H = 1080, 1920
 
     tmp_frame = video_path.with_suffix(".tmp.jpg")
     shift_px = int(TARGET_H * shift_down / 100)
@@ -291,7 +291,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
                         watermark_text: str = "", line_spacing:int=LINE_SPACING,
                         bottom_margin:int=BOTTOM_MARGIN, playback_speed:float=1.0):
 
-    TARGET_W, TARGET_H = 720, 1280  # ✅ ใช้เหมือน preview
+    TARGET_W, TARGET_H = 1080, 1920
 
     white_h = int(TARGET_H * (white_bar_pct / 100.0))
     duration = get_video_duration(inp)
@@ -366,12 +366,19 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
-        "-s", f"{TARGET_W}x{TARGET_H}",
-        "-c:v","libx264","-preset","ultrafast","-crf","23",
+    
+        # ❌ ลบ -s ออก (เพราะ scale/pad ทำไปแล้วใน filter_complex)
+        # "-s", f"{TARGET_W}x{TARGET_H}",
+    
+        # ✅ ปรับคุณภาพ
+        "-c:v","libx264",
+        "-preset","slow",     # encode ช้ากว่า แต่คมกว่า
+        "-crf","18",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
+    
         "-c:a","aac","-b:a","128k",
         "-threads","1",
         "-movflags","+faststart", str(outp),
-    ])
+        ])
     subprocess.run(cmd, check=True)
 
 
