@@ -317,7 +317,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     last_text_png = outp.with_name("last_text.png")
     dummy = Image.new("RGBA", (TARGET_W, TARGET_H), (0,0,0,0))
     d = ImageDraw.Draw(dummy)
-    font = ImageFont.truetype(FONT_PATH, 55)
+    font = ImageFont.truetype(FONT_PATH, 38)
     msg = "พิกัดสินค้าในคอมเมนต์เลย"
     bbox = d.textbbox((0,0), msg, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
