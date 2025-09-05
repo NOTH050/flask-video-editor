@@ -324,7 +324,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     d = ImageDraw.Draw(dummy)
 
     # ✅ ลดขนาดฟอนต์ท้ายคลิป
-    font = ImageFont.truetype(FONT_PATH, 42)
+    font = ImageFont.truetype(FONT_PATH, 32)
 
     msg = "พิกัดสินค้าในคอมเมนต์เลยนะ"
     bbox = d.textbbox((0,0), msg, font=font)
@@ -372,8 +372,8 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     
         # ✅ ปรับคุณภาพ
         "-c:v","libx264",
-        "-preset","slow",     # encode ช้ากว่า แต่คมกว่า
-        "-crf","18",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
+        "-preset","veryfast",     # encode ช้ากว่า แต่คมกว่า
+        "-crf","20",          # ยิ่งเลขต่ำ ภาพยิ่งคม (18 ~ visually lossless)
     
         "-c:a","aac","-b:a","128k",
         "-threads","1",
