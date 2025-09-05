@@ -28,6 +28,6 @@ RUN mkdir -p /usr/share/fonts/truetype/custom && \
 EXPOSE 8080
 
 # ✅ Run Flask app ด้วย Gunicorn (เพิ่ม timeout, ใช้ gevent)
-#CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "-w", "1", "-k", "gevent", "-t", "900", "--threads", "1"]
-CMD ["gunicorn", "-w", "2", "-k", "sync", "-t", "600", "111:app", "--bind", "0.0.0.0:8080"]
+CMD ["gunicorn", "111:app", "--bind", "0.0.0.0:8080", "-w", "1", "-k", "gevent", "-t", "900", "--threads", "1"]
+
 
