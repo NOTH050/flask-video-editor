@@ -362,7 +362,9 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
     # ---------- Run ffmpeg ----------
     cmd = ["ffmpeg","-y","-i", str(inp)]
     for l in layers: cmd.extend(l.split())
-    cmd.extend([
+
+    
+      cmd.extend([
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "0:a?",
         "-filter:a", f"atempo={min(max(playback_speed,0.5),2.0)}",
@@ -372,6 +374,7 @@ def process_with_ffmpeg(inp: Path, outp: Path, header_text: str,
         "-c:a","aac","-b:a","128k",
         "-threads","2",
         "-movflags","+faststart", str(outp),
+      ])
     subprocess.run(cmd, check=True)
 
 
